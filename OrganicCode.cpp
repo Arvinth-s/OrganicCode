@@ -264,17 +264,18 @@ int encode(char ele[])
 string Decode(int code)
 {
 	char group[][5][3] = {{"B ", "Al", "Ga", "In", "Tl"}, {"C ", "Si", "Ge", "Sn","Pb"}, {"N ", "P ", "As", "Sb", "Bi"}, {"O ", "S ", "Se", "Te", "Po"}, {"F ", "Cl", "Br", "I ", "At"}};
+	char Hgroup[][3] = {"H", "Li", "Na", "K", "Rb"};
+	char tempH[] = " H";
 	string atom = "";
-	if(code/1000 >=0)
+	if(code/1000 >1)
 	{
 		atom = atom + group[code/1000 - 3][(code/100)%10][0];
 		atom = atom + group[code/1000 - 3][(code/ 100)%10][1];
 	}
 	else
 	{
-		char Hgroup[][3] = {"H", "Li", "Na", "K", "Rb"};
-		atom = atom+Hgroup[(code/100)%10][0];
-		atom = atom+Hgroup[(code/100)%10][1];
+		
+		atom = atom+tempH;
 	}
 	return atom;
 }
@@ -299,7 +300,7 @@ void compound::CreateAtom(char atom[])
 	strcpy(this->atom, atom);
 	this->code = encode(this->atom);
 	this->V = (this->code)/1000;
-	(V > 5 && (this->code / 100)%10 == 1)?V = 8 - V :V = V;
+	(V > 5 && (this->code / 100)%10 == 0)?V = 8 - V :V = V;
 	this->state = 0;
 	this->electronegativity = CalcElectroNegativity(0);
 	this->charge = 0;
