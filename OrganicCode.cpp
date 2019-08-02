@@ -43,7 +43,7 @@ struct compound{
 	int filled;//This is used to count the number of atoms filled
 	int charge;
 	int lonepair;
-	int Bond(char batom[]);//To form a bond
+	int Bond(char batom[], int charge);//To form a bond
 	void BreakBond(int code, int flag);//To break a bond
 	void CreateAtom(char atom[]);//constructor
 	int CalcElectroNegativity(int code);
@@ -342,7 +342,7 @@ void PrintCompound(struct compound *com, int n, int flag = 1, int end = 0)
 			cout<<"NUMBER OF ALPHA H: "<<com[i].hyperconjucation<<endl;
 		cout<<"state: "<<com[i].state<<"\t  relative electronegativity:"<<com[i].electronegativity<<"\t  valency:"<<com[i].V<<"\t  charge: "<<com[i].charge<<endl;
 		cout<<"It is connected to    atoms 		bonds\n";
-		data += to_string(com[i].code);
+		data += to_string(com[i].code)+"|"+to_string(com[i].charge+10);
 		for(int j = 0; j < com[i].element.size(); j++)
 		{
 			cout<<"                        "<<Decode(com[i].element[j])<<" 		"<<com[i].mbonds[j]<<endl;
@@ -374,12 +374,12 @@ void PrintCompound(struct compound *com, int n, int flag = 1, int end = 0)
 
 
 //This adds the bonds between the atoms and updates the electronegativity of the atom
-int compound::Bond(char batom[])
+int compound::Bond(char batom[], int charge = 0)
 {
 	if(this->element.size() > V)
 	{
 		//printf("The compound has reached its maximum valency\n");
-		return 1;
+		return 0;
 	}
 	for(int i = 0; i < this->element.size(); i++)
 	{
@@ -393,7 +393,12 @@ int compound::Bond(char batom[])
 			else
 				//printf("Both have same electronegativity\t%d\t%d\t%d\n", this->electronegativity, CalcElectroNegativity(encode(batom)), encode(batom));
 			this->lonepair = this->lonepair - 1;
-			return 1;
+			if(this->charge >= 1 && charge <= -1 && this->element.size() <= V)
+				return -1;
+			else if(this->charge <= -1 && charge >= 1  && this->element.size() <= V)
+				return 1;
+				
+			return 0;
 		}
 	}
 	this->mbonds.push_back(1);
@@ -487,7 +492,7 @@ void Hyperconjucation(struct compound *model, int *nodes, int *arange, vector<ve
 //Iterative BFS is used to calculate resonance
 void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int> > flags, int count_bonds, int n_atom, int mbonds)
 {
-	//cout<<"The number of sigma bonds in the model = "<<count_bonds<<endl;
+	cout<<"The number of sigma bonds in the model = "<<count_bonds<<endl;
 	//model[0].BreakBond(model[0].element[0], 1);
 	//model[arange[GetHash(nodes, arange, model[0].element[0], flags, n_atom) - 1]].BreakBond(model[0].code, 1);
 	//(model, n_atom);
@@ -519,11 +524,49 @@ void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int
 						//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].code<<endl;
 						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code, 0);
 						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code, 1);
+						int temp_1 = model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].atom, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].charge);
+						int temp_2 = model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].charge);
+						model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].charge+= temp_1;
 						//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
+						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].charge += temp_2;
 						printf("\t\t\t%d-----------------------%d-----------------%d\n", i, j, k);
 						PrintCompound(model, n_atom, 1);
 					}
 			}
+			else if(current.charge <= -1)
+				for(int j = 0; j < model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].mbonds.size(); j++)
+				if(i != j && model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].mbonds[j] >= 2)
+				{
+					model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)-1]].element[j], flags, n_atom) - 1]].code, 0);
+					model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)-1]].element[j], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code, 1);
+					cout<<model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom<<"\t"<<current.atom<<endl;
+					model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].Bond(current.atom);
+					model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom);
+					int temp_1 = model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].atom, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].charge);
+					int temp_2 = model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].charge);
+					model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].charge += temp_1;
+					//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
+					model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].charge += temp_2;
+					printf("\t\t\t%d-----------------------%d-----------------\n", i, j);
+						PrintCompound(model, n_atom, 1);
+				}
+			else if(current.charge >= 1)
+				for(int j = 0; j < model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].mbonds.size(); j++)
+				if(i != j && model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].mbonds[j] >= 2)
+				{
+					model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)-1]].element[j], flags, n_atom) - 1]].code, 1);
+					model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)-1]].element[j], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code, 0);
+					cout<<model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom<<"\t"<<current.atom<<endl;
+					model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].Bond(current.atom);
+					model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom);
+					int temp_1 = model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].atom, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].charge);
+					int temp_2 = model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].Bond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].atom, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].charge);
+					model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].charge+= temp_1;
+					//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
+					model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].charge += temp_2;
+					printf("\t\t\t%d-----------------------%d-----------------\n", i, j);
+						PrintCompound(model, n_atom, 1);
+				}
 		}
 		for(int i = 0; i < current.element.size(); i++)
 		{
