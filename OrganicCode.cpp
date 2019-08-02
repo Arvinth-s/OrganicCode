@@ -26,6 +26,7 @@ void PrintFlags(vector<int*> flags);
 void PrintArray(int *arr, int n);
 void PrintVector(vector<int> arr);
 string Decode(int code);
+void Hyperconjucation(struct compound *model, int *nodes, int *arange, vector<int> flags, int count_bonds, int n_atom, int mbonds, int source_num);
 
 struct compound{
 	static int count;
@@ -36,6 +37,7 @@ struct compound{
 	int code;//integer identity
 	vector<int> element;//Contains the list of bonded atoms' code
 	vector<int> mbonds;
+	int hyperconjucation;
 	int electronegativity;//Electronegativity of that atom
 	int filled;//This is used to count the number of atoms filled
 	int charge;
@@ -263,19 +265,20 @@ int encode(char ele[])
 
 string Decode(int code)
 {
-	char group[][5][3] = {{"B ", "Al", "Ga", "In", "Tl"}, {"C ", "Si", "Ge", "Sn","Pb"}, {"N ", "P ", "As", "Sb", "Bi"}, {"O ", "S ", "Se", "Te", "Po"}, {"F ", "Cl", "Br", "I ", "At"}};
+	char group[][5][3] = {{"B", "Al", "Ga", "In", "Tl"}, {"C", "Si", "Ge", "Sn","Pb"}, {"N", "P", "As", "Sb", "Bi"}, {"O", "S", "Se", "Te", "Po"}, {"F", "Cl", "Br", "I", "At"}};
 	char Hgroup[][3] = {"H", "Li", "Na", "K", "Rb"};
-	char tempH[] = " H";
+	char tempH[] = "H";
 	string atom = "";
 	if(code/1000 >1)
 	{
 		atom = atom + group[code/1000 - 3][(code/100)%10][0];
-		atom = atom + group[code/1000 - 3][(code/ 100)%10][1];
+		if(strlen(group[code/1000 - 3][(code/ 100)%10]) == 2)atom = atom + group[code/1000 - 3][(code/ 100)%10][1];
+		atom = atom + char(code%10+'0');
 	}
 	else
 	{
-		
 		atom = atom+tempH;
+		atom = atom + char(code%10+'0');
 	}
 	return atom;
 }
@@ -305,6 +308,7 @@ void compound::CreateAtom(char atom[])
 	this->electronegativity = CalcElectroNegativity(0);
 	this->charge = 0;
 	this->lonepair = V;
+	this->hyperconjucation = 0;
 }
 
 
@@ -314,6 +318,8 @@ void PrintCompound(struct compound *com, int n)
 	for(int i = 0; i<n; i++)
 	{
 		cout<<"\n\n\t\t\t\t atom:"<<com[i].atom<<endl;
+		if(com[i].code/1000 == 4 && (com[i].code/100)%10 == 0)
+			cout<<"NUMBER OF ALPHA H: "<<com[i].hyperconjucation<<endl;
 		cout<<"state: "<<com[i].state<<"\t  relative electronegativity:"<<com[i].electronegativity<<"\t  valency:"<<com[i].V<<"\t  charge: "<<com[i].charge<<endl;
 		cout<<"It is connected to    atoms 		bonds\n";
 		for(int j = 0; j < com[i].element.size(); j++)
@@ -328,7 +334,7 @@ int compound::Bond(char batom[])
 {
 	if(this->element.size() > V)
 	{
-		printf("The compound has reached its maximum valency\n");
+		//printf("The compound has reached its maximum valency\n");
 		return 1;
 	}
 	for(int i = 0; i < this->element.size(); i++)
@@ -341,7 +347,7 @@ int compound::Bond(char batom[])
 			else if(this->electronegativity < CalcElectroNegativity(encode(batom)))
 				this->state = this->state + 1;
 			else
-				printf("Both have same electronegativity\t%d\t%d\t%d\n", this->electronegativity, CalcElectroNegativity(encode(batom)), encode(batom));
+				//printf("Both have same electronegativity\t%d\t%d\t%d\n", this->electronegativity, CalcElectroNegativity(encode(batom)), encode(batom));
 			this->lonepair = this->lonepair - 1;
 			return 1;
 		}
@@ -353,7 +359,7 @@ int compound::Bond(char batom[])
 	else if(this->electronegativity < CalcElectroNegativity(encode(batom)))
 		this->state = this->state + 1;
 	else
-		printf("THIS ATOM: %s \tBoth have same electronegativity\t%d\t%d\t%d\n", this->atom, this->electronegativity, CalcElectroNegativity(encode(batom)), encode(batom));
+		//printf("THIS ATOM: %s \tBoth have same electronegativity\t%d\t%d\t%d\n", this->atom, this->electronegativity, CalcElectroNegativity(encode(batom)), encode(batom));
 	return 0;
 }
 
@@ -412,6 +418,28 @@ void compound::BreakBond(int code, int flag)
 		return;
 }
 
+void Hyperconjucation(struct compound *model, int *nodes, int *arange, vector<vector<int> > flags, int count_bonds, int n_atom, int mbonds, int source_num)
+{
+	int count = 0;
+	compound source = model[source_num];
+	if(!(source.code/1000 == 4 && (source.code/100)%10 == 0))
+	{
+		model[source_num].hyperconjucation = -1;
+	}
+	for(int i = 0; i < source.element.size(); i++)
+	{
+	for(int j = 0; j < model[arange[GetHash(nodes, arange, source.element[i], flags, n_atom) - 1]].element.size(); j++)
+	{
+		if(i != j)
+			if(model[arange[GetHash(nodes, arange, source.element[i], flags, n_atom) - 1]].element[j]/1000 == 1)
+			{
+				count++;
+			}
+	}
+	}
+	model[source_num].hyperconjucation = count;
+}
+
 //Iterative BFS is used to calculate resonance
 void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int> > flags, int count_bonds, int n_atom, int mbonds)
 {
@@ -437,18 +465,20 @@ void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int
 			if(current.mbonds[i] >= 2)
 			{
 				for(int j = 0; j < model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].mbonds.size(); j++)
+				if(i != j)
 				for(int k = 0; k < model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].mbonds.size(); k++)
-					if(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].mbonds[k] >= 2)
+					if(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].mbonds[k] >= 2 && j != k)
 					{
 						flag = 1;
 						model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code, 0);
 						model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].code, 1);
-						cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].code<<endl;
-						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code, 0);
-						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code, 1);
-						cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
-						printf("%d-----------------------%d-----------------%d\n", i, j, k);
+						//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].code<<endl;
+						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code, 0);
+						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code, 1);
+						//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
+						printf("\t\t\t%d-----------------------%d-----------------%d\n", i, j, k);
 						PrintCompound(model, n_atom);
+						
 					}
 			}
 		}
@@ -461,57 +491,13 @@ void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int
 			}
 		}
 	}
-	PrintCompound(model, n_atom);
+	//PrintCompound(model, n_atom);
 }
 
 int main()
 {
-	int n;
-	char ch[][3] = {"o1", "c1"};
-	
-	printf("Enter the number of atoms in your model: ");
-	scanf("%d", &n);
-	compound model[n];
-	int nodes[n], arange[n];
-	char atoms[4], element1[4], element2[4];
-	for(int i = 0; i < n; i++)
-	{
-		printf("Enter atom %d : ", i+1);
-		cin>>atoms;
-		model[i].CreateAtom(atoms);
-		nodes[i] = model[i].code;
-		arange[i] = i;
-	}
-	vector<vector<int> > flags;
-	flags = SetFlags(nodes, arange, n);
-	//PrintArray(nodes, n);
-	//PrintArray(arange, n);
-	//PrintFlags(flags);
-	vector<int> _flag;
-	vector<vector<int> >::iterator itr2;
-	/*int ch = 0;
-	cout<<"Want to have in built standard compounds?(y/n):";
-	cin>>ch;
-	if(ch)
-	{
-		printf("1. CARBON DIOXIDE\n2.SULPHUR TRIOXIDE\n3.BENZENE\n4.AMMONIA\n5.WATER\nPlease select one:");
-		cin>>ch;
-		switch(ch)
-		{
-			case 1:model
-		}
-	}*/
-	for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
-	{
-		_flag = *itr2;
-		//PrintVector(_flag);
-	}
-	int nbonds = 0;
-	int count_bonds = 0, temp_hold = 0;
-	printf("Enter the number of bonds: ");
-	scanf("%d", &nbonds);
-	count_bonds = nbonds;
 	int choice = 0;
+	int n;
 	cout<<"Want to have in built standard compounds?(1/0):";
 	cin>>choice;
 	if(choice)
@@ -521,6 +507,36 @@ int main()
 		switch(choice)
 		{
 			case 1:	
+				{
+				n = 3;
+				compound model[n];
+				int nodes[n], arange[n];
+				char atoms[4], element1[4], element2[4];
+				strcpy(atoms, "C1");
+				model[0].CreateAtom(atoms);
+				nodes[0] = model[0].code;
+				arange[0] = 0;
+				strcpy(atoms, "O1");
+				model[1].CreateAtom(atoms);
+				nodes[1] = model[1].code;
+				arange[1] = 1;
+				strcpy(atoms, "O2");
+				model[2].CreateAtom(atoms);
+				nodes[2] = model[2].code;
+				arange[2] = 2;
+				vector<vector<int> > flags;
+				flags = SetFlags(nodes, arange, n);
+				vector<int> _flag;
+				vector<vector<int> >::iterator itr2;
+				for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
+				{
+					_flag = *itr2;
+					//PrintVector(_flag);
+				}
+				int nbonds = 0;
+				int count_bonds = 0, temp_hold = 0;
+				nbonds = 4;
+				count_bonds = nbonds;
 				for(int i = 0 ; i < 2; i++)
 				{
 					strcpy(element1, "C1");
@@ -534,8 +550,49 @@ int main()
 					count_bonds -= temp_hold;
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 				}
+				PrintCompound(model, n);
+				for(int i = 0; i < n; i++)
+					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
+				return 0;
 				break;
+				}
 			case 2:
+				{
+				
+				n = 4;
+				compound model[n];
+				int nodes[n], arange[n];
+				char atoms[4], element1[4], element2[4];
+				strcpy(atoms, "S1");
+				model[0].CreateAtom(atoms);
+				nodes[0] = model[0].code;
+				arange[0] = 0;
+				strcpy(atoms, "O1");
+				model[1].CreateAtom(atoms);
+				nodes[1] = model[1].code;
+				arange[1] = 1;
+				strcpy(atoms, "O2");
+				model[2].CreateAtom(atoms);
+				nodes[2] = model[2].code;
+				arange[2] = 2;
+				strcpy(atoms, "O3");
+				model[3].CreateAtom(atoms);
+				nodes[3] = model[3].code;
+				arange[3] = 3;
+				vector<vector<int> > flags;
+				flags = SetFlags(nodes, arange, n);
+				vector<int> _flag;
+				vector<vector<int> >::iterator itr2;
+				for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
+				{
+					_flag = *itr2;
+					//PrintVector(_flag);
+				}
+				int nbonds = 0;
+				int count_bonds = 0, temp_hold = 0;
+				nbonds = 4;
+				count_bonds = nbonds;
 				for(int i = 0; i < 2; i++)
 				{
 					strcpy(element1, "S1");
@@ -553,9 +610,82 @@ int main()
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
 					count_bonds -= temp_hold;
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+					
 				}
-				break;
-			case 3:	
+				PrintCompound(model, n);
+				for(int i = 0; i < n; i++)
+					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
+				return 0;
+				break;}
+			case 3:
+				{	
+				n = 12;
+				compound model[n];
+				int nodes[n], arange[n];
+				char atoms[4], element1[4], element2[4];
+				strcpy(atoms, "C1");
+				model[0].CreateAtom(atoms);
+				nodes[0] = model[0].code;
+				arange[0] = 0;
+				strcpy(atoms, "C2");
+				model[1].CreateAtom(atoms);
+				nodes[1] = model[1].code;
+				arange[1] = 1;
+				strcpy(atoms, "C3");
+				model[2].CreateAtom(atoms);
+				nodes[2] = model[2].code;
+				arange[2] = 2;
+				strcpy(atoms, "C4");
+				model[3].CreateAtom(atoms);
+				nodes[3] = model[3].code;
+				arange[3] = 3;
+				strcpy(atoms, "C5");
+				model[4].CreateAtom(atoms);
+				nodes[4] = model[4].code;
+				arange[4] = 4;
+				strcpy(atoms, "C6");
+				model[5].CreateAtom(atoms);
+				nodes[5] = model[5].code;
+				arange[5] = 5;
+				strcpy(atoms, "H1");
+				model[6].CreateAtom(atoms);
+				nodes[6] = model[6].code;
+				arange[6] = 6;
+				strcpy(atoms, "H2");
+				model[7].CreateAtom(atoms);
+				nodes[7] = model[7].code;
+				arange[7] = 7;
+				strcpy(atoms, "H3");
+				model[8].CreateAtom(atoms);
+				nodes[8] = model[8].code;
+				arange[8] = 8;
+				strcpy(atoms, "H4");
+				model[9].CreateAtom(atoms);
+				nodes[9] = model[9].code;
+				arange[9] = 9;
+				strcpy(atoms, "H5");
+				model[10].CreateAtom(atoms);
+				nodes[10] = model[10].code;
+				arange[10] = 10;
+				strcpy(atoms, "H6");
+				model[11].CreateAtom(atoms);
+				nodes[11] = model[11].code;
+				arange[11] = 11;
+
+				vector<vector<int> > flags;
+				flags = SetFlags(nodes, arange, n);
+				vector<int> _flag;
+				vector<vector<int> >::iterator itr2;
+				for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
+				{
+					_flag = *itr2;
+					//PrintVector(_flag);
+				}
+				int nbonds = 0;
+				int count_bonds = 0, temp_hold = 0;
+				nbonds = 15;
+				count_bonds = nbonds;
 				for(int i = 0; i < 2; i++)
 				{
 					strcpy(element1, "C1");
@@ -589,10 +719,75 @@ int main()
 				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
 				count_bonds -= temp_hold;
 				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
-				break;
+				strcpy(element1, "C6");
+				strcpy(element2, "H6");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "H5");
+				strcpy(element2, "C5");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "H4");
+				strcpy(element2, "C4");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "C3");
+				strcpy(element2, "H3");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "H2");
+				strcpy(element2, "C2");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "H1");
+				strcpy(element2, "C1");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				PrintCompound(model, n);
+				for(int i = 0; i < n; i++)
+					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
+				return 0;
+				break;}
+			
 		}
 	}
-	else
+	else{
+		int n;
+		printf("Enter the number of atoms in your model: ");
+		scanf("%d", &n);
+		compound model[n];
+		int nodes[n], arange[n];
+		char atoms[4], element1[4], element2[4];
+		for(int i = 0; i < n; i++)
+		{
+			printf("Enter atom %d : ", i+1);
+			cin>>atoms;
+			model[i].CreateAtom(atoms);
+			nodes[i] = model[i].code;
+			arange[i] = i;
+		}
+		vector<vector<int> > flags;
+		flags = SetFlags(nodes, arange, n);
+		vector<int> _flag;
+		vector<vector<int> >::iterator itr2;
+		for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
+		{
+			_flag = *itr2;
+			//PrintVector(_flag);
+		}
+		int nbonds = 0;
+		int count_bonds = 0, temp_hold = 0;
+		printf("Enter the number of bonds: ");
+		scanf("%d", &nbonds);
+		count_bonds = nbonds;
+
 		for(int i = 0; i < nbonds; i++)
 		{
 			cout<<"Enter the bonding atoms: ";
@@ -601,7 +796,11 @@ int main()
 			count_bonds -= temp_hold;
 			temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 		}
-	PrintCompound(model, n);
-	resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
-	return 0;
+		PrintCompound(model, n);
+		for(int i = 0; i < n; i++)
+			Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+		resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
+		return 0;
+	}
+	
 }
