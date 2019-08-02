@@ -534,7 +534,6 @@ void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int
 			}
 		}
 	}
-	PrintCompound(model, n_atom, 1);
 }
 
 int main()
@@ -548,7 +547,7 @@ int main()
 	fclose(myfile);
 	if(choice)
 	{
-		printf("1. CARBON DIOXIDE\n2.SULPHUR TRIOXIDE\n3.BENZENE\n4.AMMONIA\n5.WATER\nPlease select one:");
+		printf("1. CARBON DIOXIDE\n2.SULPHUR TRIOXIDE\n3.BENZENE\nPlease select one:");
 		cin>>choice;
 		switch(choice)
 		{
@@ -572,13 +571,6 @@ int main()
 				arange[2] = 2;
 				vector<vector<int> > flags;
 				flags = SetFlags(nodes, arange, n);
-				vector<int> _flag;
-				vector<vector<int> >::iterator itr2;
-				for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
-				{
-					_flag = *itr2;
-					//PrintVector(_flag);
-				}
 				int nbonds = 0;
 				int count_bonds = 0, temp_hold = 0;
 				nbonds = 4;
@@ -600,7 +592,6 @@ int main()
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
-				PrintCompound(model, n, 1, 1);
 				break;
 				}
 			case 2:
@@ -628,13 +619,6 @@ int main()
 				arange[3] = 3;
 				vector<vector<int> > flags;
 				flags = SetFlags(nodes, arange, n);
-				vector<int> _flag;
-				vector<vector<int> >::iterator itr2;
-				for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
-				{
-					_flag = *itr2;
-					//PrintVector(_flag);
-				}
 				int nbonds = 0;
 				int count_bonds = 0, temp_hold = 0;
 				nbonds = 4;
@@ -662,7 +646,6 @@ int main()
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
-				PrintCompound(model, n, 1, 1);
 				break;}
 			case 3:
 				{	
@@ -721,13 +704,6 @@ int main()
 
 				vector<vector<int> > flags;
 				flags = SetFlags(nodes, arange, n);
-				vector<int> _flag;
-				vector<vector<int> >::iterator itr2;
-				for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
-				{
-					_flag = *itr2;
-					//PrintVector(_flag);
-				}
 				int nbonds = 0;
 				int count_bonds = 0, temp_hold = 0;
 				nbonds = 15;
@@ -800,7 +776,6 @@ int main()
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 				cout<<"printing\n\n";
-				PrintCompound(model, n, 1, 1);
 				cout<<"printing\n\n";
 				break;}
 			
