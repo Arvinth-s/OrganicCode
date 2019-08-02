@@ -5,6 +5,7 @@
 #include<list>
 #include<string.h>
 #include<string>
+#include<fstream>
 
 
 //It All elements having more than one valency can form more than one bond
@@ -311,10 +312,29 @@ void compound::CreateAtom(char atom[])
 	this->hyperconjucation = 0;
 }
 
+string to_string(int code)
+{
+	string s = "";
+	while(code/10 != 0)
+	{
+		s += code%10 + '0';
+		code/= 10;
+	}
+	s += code%10 + '0';
+	string::iterator itr;
+	string s2;
+	for(itr = s.end(); itr != s.begin();)
+	{
+		itr--;
+		s2 += *itr;
+	} 
+	return s2;
+}
 
-void PrintCompound(struct compound *com, int n)
+void PrintCompound(struct compound *com, int n, int flag = 1, int end = 0)
 {
 	printf("Printing the compound\n");
+	string data = "";
 	for(int i = 0; i<n; i++)
 	{
 		cout<<"\n\n\t\t\t\t atom:"<<com[i].atom<<endl;
@@ -322,10 +342,34 @@ void PrintCompound(struct compound *com, int n)
 			cout<<"NUMBER OF ALPHA H: "<<com[i].hyperconjucation<<endl;
 		cout<<"state: "<<com[i].state<<"\t  relative electronegativity:"<<com[i].electronegativity<<"\t  valency:"<<com[i].V<<"\t  charge: "<<com[i].charge<<endl;
 		cout<<"It is connected to    atoms 		bonds\n";
+		data += to_string(com[i].code);
 		for(int j = 0; j < com[i].element.size(); j++)
+		{
 			cout<<"                        "<<Decode(com[i].element[j])<<" 		"<<com[i].mbonds[j]<<endl;
-		
+			data += "\t"+to_string(com[i].element[j])+"|"+to_string(com[i].mbonds[j]);
+		}
+		if(i == n-1) data += "\t#"+to_string(end)+"\n";
+		else data += "\t#"+to_string(0)+"\n";
 	}
+	if(!flag)
+		return;
+	char wdata[data.size()+1];
+	strcpy(wdata, data.c_str());
+	FILE *myfile ;  
+    myfile = fopen("OrganicData.txt", "a") ; 
+    if ( myfile == NULL ) 
+        printf( "Saved to OrganicData.txt\n" ) ; 
+    else
+    { 
+        if ( data.size() > 0 ) 
+        { 
+            fputs(wdata, myfile) ;    
+            fputs("\n", myfile) ; 
+        } 
+        fclose(myfile) ; 
+        printf("Data successfully written\n"); 
+        return;
+    }
 }
 
 
@@ -374,7 +418,7 @@ void compound::BreakBond(int code, int flag)
 			{
 				if(this->mbonds.back() == 1)
 				{
-					cout<<"caution!\n";
+					cout<<"caution!Sigma bond is broken\n";
 					this->element.pop_back();
 					this->mbonds.pop_back();
 				}
@@ -458,7 +502,7 @@ void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int
 	{
 		current = queue.front();
 		queue.pop_front();
-		visited[arange[GetHash(nodes, arange, current.code, flags, n_atom)]] = true;
+		visited[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]] = true;
 		int flag = 0;
 		for(int i = 0; i < current.mbonds.size(); i++)
 		{
@@ -477,21 +521,20 @@ void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int
 						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code, 1);
 						//cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
 						printf("\t\t\t%d-----------------------%d-----------------%d\n", i, j, k);
-						PrintCompound(model, n_atom);
-						
+						PrintCompound(model, n_atom, 1);
 					}
 			}
 		}
 		for(int i = 0; i < current.element.size(); i++)
 		{
-			if(!visited[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)]])
+			if(!visited[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]])
 			{
-				queue.push_back(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)]]);
-				visited[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)]] = true;
+				queue.push_back(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]]);
+				visited[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]] = true;
 			}
 		}
 	}
-	//PrintCompound(model, n_atom);
+	PrintCompound(model, n_atom, 1);
 }
 
 int main()
@@ -500,6 +543,9 @@ int main()
 	int n;
 	cout<<"Want to have in built standard compounds?(1/0):";
 	cin>>choice;
+	FILE *myfile;
+	myfile = fopen("OrganicData.txt", "w");
+	fclose(myfile);
 	if(choice)
 	{
 		printf("1. CARBON DIOXIDE\n2.SULPHUR TRIOXIDE\n3.BENZENE\n4.AMMONIA\n5.WATER\nPlease select one:");
@@ -550,11 +596,11 @@ int main()
 					count_bonds -= temp_hold;
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 				}
-				PrintCompound(model, n);
+				PrintCompound(model, n, 1);
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
-				return 0;
+				PrintCompound(model, n, 1, 1);
 				break;
 				}
 			case 2:
@@ -612,11 +658,11 @@ int main()
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 					
 				}
-				PrintCompound(model, n);
+				PrintCompound(model, n, 1);
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
-				return 0;
+				PrintCompound(model, n, 1, 1);
 				break;}
 			case 3:
 				{	
@@ -749,14 +795,17 @@ int main()
 				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
 				count_bonds -= temp_hold;
 				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
-				PrintCompound(model, n);
+				PrintCompound(model, n, 1);
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
-				return 0;
+				cout<<"printing\n\n";
+				PrintCompound(model, n, 1, 1);
+				cout<<"printing\n\n";
 				break;}
 			
 		}
+		return 0;
 	}
 	else{
 		int n;
@@ -796,7 +845,7 @@ int main()
 			count_bonds -= temp_hold;
 			temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 		}
-		PrintCompound(model, n);
+		PrintCompound(model, n, 1);
 		for(int i = 0; i < n; i++)
 			Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
 		resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
