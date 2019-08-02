@@ -41,7 +41,7 @@ struct compound{
 	int charge;
 	int lonepair;
 	int Bond(char batom[]);//To form a bond
-	void BreakBond(struct compound model, int code, int flag);//To break a bond
+	void BreakBond(int code, int flag);//To break a bond
 	void CreateAtom(char atom[]);//constructor
 	int CalcElectroNegativity(int code);
 	//int CalcElectroNegativity();
@@ -357,51 +357,111 @@ int compound::Bond(char batom[])
 	return 0;
 }
 
-void compound::BreakBond(struct compound model, int code, int flag)
+void compound::BreakBond(int code, int flag)
 {
+	printf("Deleting %d from %d\n", code, this->code);
 	list<int> stack;
 	list<int> bonds_stack;
-		while(model.element.size() > 0)
+		while(this->element.size() > 0)
 		{
-			if(model.element.back() == code)
+			if(this->element.back() == code)
 			{
+				if(this->mbonds.back() == 1)
+				{
+					cout<<"caution!\n";
+					this->element.pop_back();
+					this->mbonds.pop_back();
+				}
+				else
+					this->mbonds.back() -= 1;
 				if(flag)
 				{
-					if(model.electronegativity > CalcElectroNegativity(code))
-						model.charge -= 1;
+					if(this->electronegativity > CalcElectroNegativity(code))
+						this->charge -= 1;
+					else if(this -> electronegativity == CalcElectroNegativity(code))
+						this->charge -= 1;
 					else
-						model.charge += 1;
+						this->charge += 1;
 				}
 				else
 				{
-					if(model.electronegativity > CalcElectroNegativity(code))
-						model.charge += 1;
-					else 
-						model.charge -= 1;
+					if(this->electronegativity > CalcElectroNegativity(code))
+						this->charge += 1;
+					else if(this -> electronegativity == CalcElectroNegativity(code))
+						this->charge += 1;
+					else
+						this->charge -= 1;
 				}
 				break;
 			}
 			else
 			{
-				stack.push_back(model.element.back());
-				bonds_stack.push_back(model.mbonds.back());
-				model.element.pop_back();
-				model.mbonds.pop_back();
+				stack.push_back(this->element.back());
+				bonds_stack.push_back(this->mbonds.back());
+				this->element.pop_back();
+				this->mbonds.pop_back();
 			}
 		}
 		while(stack.size() > 0)
 		{
-			model.element.push_back(stack.back());
-			model.mbonds.push_back(bonds_stack.back());
+			this->element.push_back(stack.back());
+			this->mbonds.push_back(bonds_stack.back());
 			stack.pop_back();
 			bonds_stack.pop_back();
 		}
 		return;
 }
 
-void resonance(struct compound *comp, int count_bonds, int n_atom, int mbonds)
+//Iterative BFS is used to calculate resonance
+void resonance(struct compound *model, int* nodes, int*arange, vector<vector<int> > flags, int count_bonds, int n_atom, int mbonds)
 {
-	
+	//cout<<"The number of sigma bonds in the model = "<<count_bonds<<endl;
+	//model[0].BreakBond(model[0].element[0], 1);
+	//model[arange[GetHash(nodes, arange, model[0].element[0], flags, n_atom) - 1]].BreakBond(model[0].code, 1);
+	//(model, n_atom);
+	bool visited[n_atom];
+	for(int i = 0; i < n_atom; i++)
+		visited[i] = false;
+	list<struct compound> queue;
+	compound current;  
+	queue.push_back(model[0]);
+	visited[0] = true;
+	while(!queue.empty())
+	{
+		current = queue.front();
+		queue.pop_front();
+		visited[arange[GetHash(nodes, arange, current.code, flags, n_atom)]] = true;
+		int flag = 0;
+		for(int i = 0; i < current.mbonds.size(); i++)
+		{
+			if(current.mbonds[i] >= 2)
+			{
+				for(int j = 0; j < model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].mbonds.size(); j++)
+				for(int k = 0; k < model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].mbonds.size(); k++)
+					if(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].mbonds[k] >= 2)
+					{
+						flag = 1;
+						model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code, 0);
+						model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].code, 1);
+						cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, current.code, flags, n_atom) - 1]].code<<endl;
+						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code, 0);
+						model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].BreakBond(model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code, 1);
+						cout<<"breaking bonds between : "<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].element[k], flags, n_atom) - 1]].code<<"\t\t"<<model[arange[GetHash(nodes, arange, model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom) - 1]].element[j], flags, n_atom) - 1]].code<<endl;
+						printf("%d-----------------------%d-----------------%d\n", i, j, k);
+						PrintCompound(model, n_atom);
+					}
+			}
+		}
+		for(int i = 0; i < current.element.size(); i++)
+		{
+			if(!visited[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)]])
+			{
+				queue.push_back(model[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)]]);
+				visited[arange[GetHash(nodes, arange, current.element[i], flags, n_atom)]] = true;
+			}
+		}
+	}
+	PrintCompound(model, n_atom);
 }
 
 int main()
@@ -429,6 +489,18 @@ int main()
 	//PrintFlags(flags);
 	vector<int> _flag;
 	vector<vector<int> >::iterator itr2;
+	/*int ch = 0;
+	cout<<"Want to have in built standard compounds?(y/n):";
+	cin>>ch;
+	if(ch)
+	{
+		printf("1. CARBON DIOXIDE\n2.SULPHUR TRIOXIDE\n3.BENZENE\n4.AMMONIA\n5.WATER\nPlease select one:");
+		cin>>ch;
+		switch(ch)
+		{
+			case 1:model
+		}
+	}*/
 	for(itr2 = flags.begin(); itr2 != flags.end(); itr2++)
 	{
 		_flag = *itr2;
@@ -439,15 +511,97 @@ int main()
 	printf("Enter the number of bonds: ");
 	scanf("%d", &nbonds);
 	count_bonds = nbonds;
-	for(int i = 0; i < nbonds; i++)
+	int choice = 0;
+	cout<<"Want to have in built standard compounds?(1/0):";
+	cin>>choice;
+	if(choice)
 	{
-		cout<<"Enter the bonding atoms: ";
-		cin>>element1>>element2;
-		temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
-		count_bonds =- temp_hold;
-		temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+		printf("1. CARBON DIOXIDE\n2.SULPHUR TRIOXIDE\n3.BENZENE\n4.AMMONIA\n5.WATER\nPlease select one:");
+		cin>>choice;
+		switch(choice)
+		{
+			case 1:	
+				for(int i = 0 ; i < 2; i++)
+				{
+					strcpy(element1, "C1");
+					strcpy(element2, "O1");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+					strcpy(element1, "C1");
+					strcpy(element2, "O2");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				}
+				break;
+			case 2:
+				for(int i = 0; i < 2; i++)
+				{
+					strcpy(element1, "S1");
+					strcpy(element2, "O1");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+					strcpy(element1, "S1");
+					strcpy(element2, "O2");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+					strcpy(element1, "S1");
+					strcpy(element2, "O3");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				}
+				break;
+			case 3:	
+				for(int i = 0; i < 2; i++)
+				{
+					strcpy(element1, "C1");
+					strcpy(element2, "C2");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+					strcpy(element1, "C3");
+					strcpy(element2, "C4");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+					strcpy(element1, "C5");
+					strcpy(element2, "C6");
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+					count_bonds -= temp_hold;
+					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				}
+				strcpy(element1, "C1");
+				strcpy(element2, "C6");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "C5");
+				strcpy(element2, "C4");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				strcpy(element1, "C3");
+				strcpy(element2, "C2");
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+				count_bonds -= temp_hold;
+				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+				break;
+		}
 	}
+	else
+		for(int i = 0; i < nbonds; i++)
+		{
+			cout<<"Enter the bonding atoms: ";
+			cin>>element1>>element2;
+			temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
+			count_bonds -= temp_hold;
+			temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
+		}
 	PrintCompound(model, n);
-	resonance(model, count_bonds, n, nbonds);
+	resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 	return 0;
 }
