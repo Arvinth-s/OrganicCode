@@ -6,6 +6,7 @@
 #include<string.h>
 #include<string>
 #include<fstream>
+#include<math.h>
 
 
 //It All elements having more than one valency can form more than one bond
@@ -220,17 +221,26 @@ int encode(char ele[])
 	int i=0;
 	char element[3];
 	int pos = 0;
+	int count = 3;
 	if(strlen(ele) == 2)
 	{
 		pos = ele[1] - '0'; 
 		element[0] = ele[0];
 		element[1] = '\0';
 	}
-	else if(strlen(ele) == 2)
+	else if(strlen(ele) >= 3)
 	{
-		pos = ele[2] - '0'; 
-		element[0] = ele[0];
-		element[1] =  ele[1] ;
+		if(ele[1] < '0' && ele[0] > '9')
+		{
+			count = 3;
+			while(strlen(ele) >= count) 
+			{
+				pos = pow(10, count - 3)*pos + ele[count] - '0';
+			}
+			element[0] = ele[0];
+			element[1] =  ele[1] ;
+			element[2] = '\0';
+		}
 	}
 	else
 	{
