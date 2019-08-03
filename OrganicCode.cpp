@@ -232,14 +232,26 @@ int encode(char ele[])
 	{
 		if(ele[1] < '0' && ele[0] > '9')
 		{
-			count = 3;
-			while(strlen(ele) >= count) 
+			count = 2;
+			while(strlen(ele) > count) 
 			{
-				pos = pow(10, count - 3)*pos + ele[count] - '0';
+				pos = pow(10, count - 2)*pos + ele[count] - '0';
+				count++;
 			}
 			element[0] = ele[0];
 			element[1] =  ele[1] ;
 			element[2] = '\0';
+		}
+		else
+		{
+			count = 1;
+			while(strlen(ele) > count)
+			{
+				pos = pow(10, count -1)*pos + ele[count] - '0';
+				count++;
+			}
+			element[0] = ele[0];
+			element[1] ='\0';
 		}
 	}
 	else
@@ -487,6 +499,7 @@ void Hyperconjucation(struct compound *model, int *nodes, int *arange, vector<ve
 	}
 	for(int i = 0; i < source.element.size(); i++)
 	{
+	cout<<source.element[i]<<endl;	
 	for(int j = 0; j < model[arange[GetHash(nodes, arange, source.element[i], flags, n_atom) - 1]].element.size(); j++)
 	{
 		if(i != j)
@@ -862,19 +875,18 @@ int main()
 		printf("Enter the number of bonds: ");
 		scanf("%d", &nbonds);
 		count_bonds = nbonds;
-
+		
 		for(int i = 0; i < nbonds; i++)
 		{
 			cout<<"Enter the bonding atoms: ";
 			cin>>element1>>element2;
+			cout<<arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]<<"\t"<<arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]<<endl;
 			temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
 			count_bonds -= temp_hold;
 			temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 		}
-		
 		for(int i = 0; i < n; i++)
 			Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
-		PrintCompound(model, n, 1);
 		resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 		PrintCompound(model, n, 1, 1);
 		return 0;
