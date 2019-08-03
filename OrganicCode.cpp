@@ -631,15 +631,14 @@ int main()
 					count_bonds -= temp_hold;
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 				}
-				PrintCompound(model, n, 1);
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+				PrintCompound(model, n, 1);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 				break;
 				}
 			case 2:
 				{
-				
 				n = 4;
 				compound model[n];
 				int nodes[n], arange[n];
@@ -685,9 +684,9 @@ int main()
 					temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 					
 				}
-				PrintCompound(model, n, 1);
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+				PrintCompound(model, n, 1);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 				break;}
 			case 3:
@@ -744,7 +743,6 @@ int main()
 				model[11].CreateAtom(atoms);
 				nodes[11] = model[11].code;
 				arange[11] = 11;
-
 				vector<vector<int> > flags;
 				flags = SetFlags(nodes, arange, n);
 				int nbonds = 0;
@@ -814,9 +812,9 @@ int main()
 				temp_hold = model[arange[GetHash(nodes, arange, encode(element1), flags, n) - 1]].Bond(element2);
 				count_bonds -= temp_hold;
 				temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
-				PrintCompound(model, n, 1);
 				for(int i = 0; i < n; i++)
 					Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+				PrintCompound(model, n, 1);
 				resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 				cout<<"printing\n\n";
 				cout<<"printing\n\n";
@@ -863,9 +861,10 @@ int main()
 			count_bonds -= temp_hold;
 			temp_hold = model[arange[GetHash(nodes, arange, encode(element2), flags, n) - 1]].Bond(element1);
 		}
-		PrintCompound(model, n, 1);
+		
 		for(int i = 0; i < n; i++)
 			Hyperconjucation(model, nodes, arange, flags, count_bonds, n, nbonds, i);
+		PrintCompound(model, n, 1);
 		resonance(model, nodes, arange, flags, count_bonds, n, nbonds);
 		return 0;
 	}
